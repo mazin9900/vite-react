@@ -2,103 +2,112 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime
-import base64
 
-# إعدادات الواجهة الاحترافية
-st.set_page_config(page_title="مركز الرصد العسكري الموحد", page_icon="🛰️", layout="wide")
+# إعدادات الواجهة الأساسية
+st.set_page_config(page_title="مركز الرصد الإقليمي الموحد", page_icon="🛰️", layout="wide")
 
+# تصميم عسكري داكن مع تأثيرات بصرية للإنذار
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap');
 * { font-family: 'Noto Kufi Arabic', sans-serif !important; direction: rtl; }
 .stApp { background: #010409; color: #e6edf3; }
-.news-box { background: #0d1117; padding: 15px; border-radius: 10px; border-right: 5px solid #1f6feb; margin-bottom: 10px; border: 1px solid #30363d; }
-.critical-box { background: #2d0000; border-right: 5px solid #ff4b4b; padding: 15px; border-radius: 10px; border: 1px solid #4a0000; animation: pulse 2s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+.news-card { background: #0d1117; padding: 20px; border-radius: 12px; border-right: 5px solid #1f6feb; margin-bottom: 15px; border: 1px solid #30363d; }
+.urgent-card { background: #2d0000; border: 2px solid #ff4b4b; padding: 20px; border-radius: 12px; margin-bottom: 20px; animation: flash 1.5s infinite; }
+@keyframes flash { 50% { border-color: transparent; } }
 </style>
 """, unsafe_allow_html=True)
 
-# المفاتيح التي زودتني بها
+# المفاتيح البرمجية (تم دمج مفتاحك هنا)
 GEMINI_KEY = "AIzaSyAkKH0ij-W1SQnOo8R1jMwMnfAf7YP4JAg"
 NEWS_KEY = "2aff2eb940e54eb8bfb441c4ad07bbc1"
 
-# --- وظائف المعالجة ---
-def translate_and_analyze(text):
+# --- وظيفة الترجمة والتحليل عبر Gemini ---
+def get_ai_analysis(text):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
-        prompt = f"أنت محلل عسكري، ترجم هذا الخبر للعربية وحلل خطورته باختصار: {text}"
+        prompt = f"ترجم هذا الخبر العسكري للعربية وحلله باختصار شديد: {text}"
         r = requests.post(url, json={"contents":[{"parts":[{"text":prompt}]}]}, timeout=10)
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
     except:
-        return text # في حال الفشل يعرض النص الأصلي
+        return text # عرض النص الأصلي في حال فشل الاتصال
 
-def play_alert():
-    audio_html = """<audio autoplay><source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg"></audio>"""
-    st.markdown(audio_html, unsafe_allow_html=True)
+# --- الهيكل الرئيسي للتطبيق ---
+st.markdown(f"""
+<div style='text-align:center; padding:10px; border-bottom:1px solid #30363d;'>
+    <h1 style='color:#58a6ff; margin:0;'>🛰️ رادار النزاع الإقليمي - غرفة العمليات</h1>
+    <p style='color:#8b949e;'>تحديث مباشر: {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}</p>
+</div>
+""", unsafe_allow_html=True)
 
-# --- الهيكل الرئيسي ---
-st.markdown(f"<h1 style='text-align:center; color:#58a6ff;'>🛰️ رادار العمليات الإقليمي | {datetime.now().strftime('%H:%M:%S')}</h1>", unsafe_allow_html=True)
+tabs = st.tabs(["📢 الأخبار والعواجل", "💥 رادار القصف والعمليات", "📺 البث الإخباري المباشر"])
 
-tabs = st.tabs(["🔴 الأخبار العاجلة", "🗺️ خريطة القصف والعمليات", "📺 البث المباشر", "🕵️ كاشف الزيف"])
-
-# --- التبويب 1: الأخبار ---
+# --- التبويب 1: الأخبار العاجلة ---
 with tabs[0]:
-    st.subheader("📰 التغذية الإخبارية (عمان، الخليج، إيران، إسرائيل)")
-    query = "(Oman OR Saudi OR UAE OR Kuwait OR Qatar OR Bahrain OR Iran OR Israel) AND (attack OR military OR explosion OR strike)"
-    url = f"https://newsapi.org/v2/everything?q={query}&apiKey={NEWS_KEY}&sortBy=publishedAt&pageSize=8"
+    st.subheader("📰 التغذية الإخبارية الحية")
+    # بحث مخصص لدول الخليج وإيران وإسرائيل
+    query = "(Oman OR Saudi OR UAE OR Kuwait OR Qatar OR Bahrain OR Iran OR Israel) AND (attack OR military OR missile)"
+    url = f"https://newsapi.org/v2/everything?q={query}&apiKey={NEWS_KEY}&sortBy=publishedAt&pageSize=6"
     
     try:
-        res = requests.get(url).json()
-        articles = res.get("articles", [])
+        data = requests.get(url).json()
+        articles = data.get("articles", [])
+        
         for art in articles:
-            analysis_ar = translate_and_analyze(art['title'])
+            analysis = get_ai_analysis(art['title'])
             
-            # تحديد الأخبار الحرجة بناءً على الكلمات
-            is_critical = any(word in analysis_ar for word in ["انفجار", "هجوم", "قصف", "صواريخ", "عمان", "السعودية", "إيران", "إسرائيل"])
-            style = "critical-box" if is_critical else "news-box"
+            # فلترة الكلمات العاجلة لإظهار الإنذار الأحمر
+            is_critical = any(word in analysis for word in ["انفجار", "هجوم", "قصف", "صواريخ", "عمان", "السعودية", "إيران"])
             
-            if is_critical: play_alert() # إطلاق صوت التنبيه
-            
-            st.markdown(f"""<div class='{style}'>
-                <h4>{'🚨' if is_urgent else '🔹'} {analysis_ar}</h4>
-                <p style='font-size:12px; color:#8b949e;'>المصدر: {art['source']['name']} | <a href='{art['url']}' style='color:#58a6ff;'>المصدر الأصلي</a></p>
-            </div>""", unsafe_allow_html=True)
+            card_class = "urgent-card" if is_critical else "news-card"
+            st.markdown(f"""
+            <div class="{card_class}">
+                <h3 style="margin:0;">{'🚨' if is_critical else '🔹'} {analysis}</h3>
+                <p style="font-size:13px; color:#8b949e; margin-top:10px;">المصدر: {art['source']['name']} | التاريخ: {art['publishedAt'][:10]}</p>
+                <a href="{art['url']}" target="_blank" style="color:#58a6ff; font-size:12px;">رابط الخبر الأصلي 🔗</a>
+            </div>
+            """, unsafe_allow_html=True)
+            if is_critical:
+                st.markdown('<audio autoplay><source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg"></audio>', unsafe_allow_html=True)
     except:
-        st.error("تأكد من اتصالك بالإنترنت وصحة المفاتيح.")
+        st.error("فشل في جلب الأخبار. تأكد من اتصال الإنترنت.")
 
-# --- التبويب 2: خريطة القصف ---
+# --- التبويب 2: خريطة القصف التفاعلية ---
 with tabs[1]:
-    st.subheader("🗺️ رادار المواقع الساخنة - تحديث مباشر")
-    
-    # خريطة تفاعلية برمجية حقيقية
+    st.subheader("📍 رادار الأهداف والضربات الميدانية")
+    # محاكاة لنقاط القصف النشطة
     strike_points = [
-        {"lat": 35.6, "lon": 51.4, "name": "طهران - استهداف منشآت صاروخية"},
-        {"lat": 32.0, "lon": 34.8, "name": "تل أبيب - تفعيل منظومات الدفاع"},
-        {"lat": 27.1, "lon": 56.2, "name": "مضيق هرمز - تحركات بحرية نشطة"},
-        {"lat": 23.6, "lon": 58.5, "name": "مسقط - منطقة آمنة / رصد دبلوماسي"}
+        {"lat": 35.6892, "lon": 51.3890, "name": "طهران: استهداف منشآت حيوية", "type": "ضربة"},
+        {"lat": 32.0853, "lon": 34.7818, "name": "تل أبيب: اعتراضات صاروخية", "type": "اعتراض"},
+        {"lat": 27.1833, "lon": 56.2667, "name": "مضيق هرمز: دوريات بحرية نشطة", "type": "رصد"},
+        {"lat": 23.5859, "lon": 58.4059, "name": "مسقط: تأهب دفاعي ووساطة", "type": "آمن"}
     ]
+    
+    
+
+    # خريطة Leaflet برمجية حقيقية
     map_html = f"""
-    <div id="map" style="height:500px; border-radius:15px; border: 1px solid #30363d;"></div>
+    <div id="map" style="height:500px; border-radius:15px; border:1px solid #30363d;"></div>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         var map = L.map('map').setView([25.0, 45.0], 5);
         L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png').addTo(map);
-        { "".join([f"L.circle([{p['lat']}, {p['lon']}], {{color:'red', fillColor:'#f03', fillOpacity:0.5, radius:90000}}).addTo(map).bindPopup('{p['name']}');" for p in strike_points]) }
+        { "".join([f"L.circle([{p['lat']}, {p['lon']}], {{color: '{'red' if p['type']=='ضربة' else 'orange'}', radius: 90000}}).addTo(map).bindPopup('<b>{p['type']}</b>: {p['name']}');" for p in strike_points]) }
     </script>
     """
     st.components.v1.html(map_html, height=520)
 
 # --- التبويب 3: البث المباشر ---
 with tabs[2]:
-    st.subheader("📺 القنوات الإخبارية المباشرة")
+    st.subheader("📺 القنوات الإخبارية - بث حي")
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("**🔴 الجزيرة مباشر**")
-        st.video("https://www.youtube.com/watch?v=B-sk6R4AJ5E")
+        st.components.v1.iframe("https://www.youtube.com/embed/B-sk6R4AJ5E", height=400)
     with c2:
         st.markdown("**🔵 العربية مباشر**")
-        st.video("https://www.youtube.com/watch?v=GkBj6pJBHpo")
+        st.components.v1.iframe("https://www.youtube.com/embed/GkBj6pJBHpo", height=400)
 
 st.markdown("---")
 st.caption("نظام الرصد العسكري الموحد 2026 | مدعوم بذكاء Gemini الاصطناعي")
