@@ -1,114 +1,90 @@
 import streamlit as st
 import requests
 import json
-import feedparser
 from datetime import datetime
 
-# إعداد الصفحة
-st.set_page_config(page_title="🛰️ وكيل الأخبار العسكري", page_icon="🛰️", layout="wide")
+# إعداد الصفحة بتصميم داكن
+st.set_page_config(page_title="🛰️ وكيل الأخبار العسكري", layout="wide", initial_sidebar_state="collapsed")
 
-# التصميم CSS
+# تصميم واجهة احترافية
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700;900&display=swap');
-* { font-family: 'Noto Kufi Arabic', sans-serif !important; }
+@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap');
+* { font-family: 'Noto Kufi Arabic', sans-serif !important; direction: rtl; }
 .stApp { background: #04090f; color: #e2e8f0; }
-h1,h2,h3,h4 { color: #38bdf8 !important; }
-div[data-testid="metric-container"] { background: #0d1e30; border-radius:10px; padding:10px; border:1px solid #1e3a5f; }
-iframe { border-radius: 12px; border: 1px solid #1e3a5f; background: #000; }
+.stTabs [data-baseweb="tab-list"] { gap: 10px; }
+.stTabs [data-baseweb="tab"] { background-color: #0d1e30; border-radius: 5px; color: white; padding: 10px; }
+iframe { border-radius: 12px; border: 1px solid #1e3a5f; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
 </style>
 """, unsafe_allow_html=True)
 
 # --- جلب المفاتيح من ملف secrets.toml ---
-try:
-    NEWS_KEY = st.secrets["NEWS_KEY"]
-    GEMINI_KEY = st.secrets["GEMINI_KEY"]
-except Exception as e:
-    st.error("❌ لم يتم العثور على المفاتيح في ملف secrets.toml. تأكد من أسماء المتغيرات.")
-    st.stop()
+NEWS_KEY = st.secrets.get("NEWS_KEY", "")
+GEMINI_KEY = st.secrets.get("GEMINI_KEY", "")
+
+if not NEWS_KEY or not GEMINI_KEY:
+    st.error("⚠️ لم يتم العثور على المفاتيح! تأكد من وجود ملف .streamlit/secrets.toml في جذر المشروع.")
 
 # الهيدر
-st.markdown("""
-<div style='text-align:center;padding:15px;background:#0d1e30;border-radius:12px;border:1px solid #1e3a5f'>
-  <h1 style='color:#38bdf8;margin:0'>🛰️ وكيل الأخبار العسكري</h1>
-  <p style='color:#64748b;margin:4px 0'>الخليج · إيران · إسرائيل · أمريكا | مراقبة حية 2026</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#38bdf8;'>🛰️ وكيل الأخبار العسكري</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#64748b;'>الخليج • إيران • إسرائيل • أمريكا | مراقبة حية 2026</p>", unsafe_allow_html=True)
 
-# --- الدوال المساعدة ---
-def ask_gemini(prompt):
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
-        r = requests.post(url, headers={"Content-Type":"application/json"},
-            json={"contents":[{"parts":[{"text":prompt}]}]}, timeout=30)
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except: return "خطأ في تحليل البيانات عبر Gemini."
+# إنشاء التبويبات
+tabs = st.tabs(["📺 بث مباشر", "📰 أخبار عاجلة", "🟠 Reddit", "🤖 تحليل Gemini"])
 
-def fetch_news(q):
-    url = f"https://newsapi.org/v2/everything?q={q}&apiKey={NEWS_KEY}&language=en&sortBy=publishedAt&pageSize=10"
-    try:
-        r = requests.get(url, timeout=10)
-        return r.json().get("articles", [])
-    except: return []
-
-def fetch_reddit(sub, q=""):
-    try:
-        # إضافة User-Agent ضروري لعمل Reddit API
-        headers = {"User-Agent": "MilitaryNewsAgent/1.0"}
-        url = f"https://www.reddit.com/r/{sub}/search.json?q={q}&sort=new&limit=10&restrict_sr=1"
-        r = requests.get(url, headers=headers, timeout=10)
-        return r.json()["data"]["children"]
-    except: return []
-
-# --- التبويبات ---
-TABS = st.tabs(["📺 بث مباشر", "📰 أخبار اليوم", "🟠 Reddit", "🚨 كشف التزييف", "🤖 تحليل استراتيجي"])
-
-# ══ TAB 1 — البث المباشر (روابط محدثة) ══
-with TABS[0]:
-    st.markdown("### 📺 القنوات الإخبارية المباشرة")
+# ══ TAB 1 — البث المباشر (روابط Live ثابتة) ══
+with tabs[0]:
     channels = {
-        "🌍 الجزيرة مباشر": "https://www.youtube.com/embed/bNyUyrR0PHo?autoplay=1",
-        "📺 العربية": "https://www.youtube.com/embed/td2XyXpPZAw?autoplay=1",
-        "📡 سكاي نيوز عربية": "https://www.youtube.com/embed/9AuqejyN64E?autoplay=1",
-        "🔴 الميادين": "https://www.youtube.com/embed/Z2DLh2GlN_I?autoplay=1",
-        "🇬🇧 BBC Arabic": "https://www.youtube.com/embed/vH8v0H2o66k?autoplay=1"
+        "🌍 الجزيرة": "UCPzE-fJp0P9fM9S_O0Csh9Q",
+        "📺 العربية": "UCahpxixMCwoANAftn6IxotA",
+        "📡 سكاي نيوز": "UC0T7ptOInS_N6S96_6Wp0mQ",
+        "🇬🇧 BBC Arabic": "UC6o-unh_Xp7V67DQU97u9Xg",
+        "🔴 الميادين": "UC8p8O95Gv0Yv77f_HPrC-mw"
     }
-    sel_ch = st.selectbox("اختر القناة للمراقبة:", list(channels.keys()))
-    st.components.v1.iframe(channels[sel_ch], height=500, scrolling=False)
+    sel_name = st.selectbox("اختر القناة للمراقبة:", list(channels.keys()))
+    channel_id = channels[sel_name]
+    # رابط البث المباشر التلقائي
+    live_url = f"https://www.youtube.com/embed/live_stream?channel={channel_id}&autoplay=1"
+    st.components.v1.iframe(live_url, height=520, scrolling=False)
 
-# ══ TAB 2 — أخبار اليوم ══
-with TABS[1]:
-    if st.button("🔄 تحديث الأخبار العاجلة", type="primary", use_container_width=True):
-        with st.spinner("جاري جلب البيانات من News API..."):
-            st.session_state['military_news'] = fetch_news("military strike Oman Gulf")
-    
-    if 'military_news' in st.session_state:
-        for art in st.session_state['military_news']:
-            st.info(f"📰 {art['source']['name']} | {art['title']}")
-            st.markdown(f"[🔗 اقرأ الخبر كاملاً]({art['url']})")
-            st.divider()
+# ══ TAB 2 — أخبار اليوم (News API) ══
+with tabs[1]:
+    if st.button("🔄 تحديث أخبار عمان والخليج", type="primary"):
+        if NEWS_KEY:
+            with st.spinner("جاري جلب آخر الأخبار العسكرية..."):
+                url = f"https://newsapi.org/v2/everything?q=military Oman OR Gulf OR missile&apiKey={NEWS_KEY}&language=ar&sortBy=publishedAt"
+                res = requests.get(url).json()
+                articles = res.get("articles", [])
+                for art in articles[:8]:
+                    st.info(f"📰 {art['source']['name']} | {art['title']}")
+                    st.write(art['description'])
+                    st.markdown(f"[🔗 رابط الخبر]({art['url']})")
+                    st.divider()
+        else:
+            st.warning("يرجى إدخال NEWS_KEY أولاً.")
 
 # ══ TAB 3 — Reddit ══
-with TABS[2]:
-    st.markdown("### 🟠 مراقبة Reddit")
-    sub_input = st.selectbox("اختر المنتدى:", ["worldnews", "MiddleEast", "CombatFootage"])
-    if st.button("📥 تحميل البيانات من Reddit", use_container_width=True):
-        with st.spinner("جاري الاتصال بـ Reddit..."):
-            posts = fetch_reddit(sub_input, "war missile")
-            if posts:
-                for p in posts:
-                    st.success(f"📌 {p['data']['title']}")
-                    st.caption(f"👍 Upvotes: {p['data']['score']}")
-            else:
-                st.warning("لم يتم العثور على منشورات جديدة.")
+with tabs[2]:
+    if st.button("🟠 جلب منشورات Reddit الحالية"):
+        with st.spinner("جاري البحث في Reddit..."):
+            headers = {"User-Agent": "MilitaryNewsAgent/2.0"}
+            res = requests.get("https://www.reddit.com/r/worldnews/search.json?q=Middle East war&sort=new&limit=10", headers=headers).json()
+            posts = res.get("data", {}).get("children", [])
+            for p in posts:
+                st.success(f"📌 {p['data']['title']}")
+                st.caption(f"👍 Upvotes: {p['data']['score']} | [🔗 الرابط](https://reddit.com{p['data']['permalink']})")
 
-# ══ TAB 5 — التحليل الاستراتيجي ══
-with TABS[4]:
-    st.markdown("### 🤖 تحليل Gemini الذكي")
-    if st.button("📊 توليد تقرير استخباراتي", type="primary", use_container_width=True):
-        with st.spinner("Gemini يقوم بتحليل الموقف الحالي..."):
-            analysis = ask_gemini("قدم تحليل مختصر للوضع الأمني في سلطنة عمان والخليج العربي لعام 2026.")
-            st.markdown(analysis)
+# ══ TAB 4 — التحليل الذكي (Gemini) ══
+with tabs[3]:
+    if st.button("🤖 توليد تقرير استخباراتي عسكري"):
+        if GEMINI_KEY:
+            with st.spinner("Gemini يقوم بتحليل الموقف الآن..."):
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
+                payload = {"contents": [{"parts": [{"text": "أنت محلل استخباراتي. قدم تقريراً عن الوضع العسكري في الخليج وعمان اليوم باختصار شديد ولهجة احترافية."}]}]}
+                r = requests.post(url, json=payload).json()
+                st.markdown(r['candidates'][0]['content']['parts'][0]['text'])
+        else:
+            st.error("مفتاح Gemini غير موجود!")
 
 st.markdown("---")
-st.markdown("<center style='color:#475569'>🛰️ وكيل الأخبار العسكري | تم الربط بملف secrets.toml بنجاح</center>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:12px; color:#475569;'>نظام المراقبة العسكري v2.2 | صنع لدعم راديو الصمود 🛰️</p>", unsafe_allow_html=True)
