@@ -6,90 +6,102 @@ import base64
 from gtts import gTTS
 import io
 
-# إعدادات الواجهة
-st.set_page_config(page_title="🛰️ رادار الخليج والشرق الأوسط", page_icon="🛰️", layout="wide")
+# إعدادات النظام
+st.set_page_config(page_title="🛰️ مركز رصد الشرق الأوسط", page_icon="🛰️", layout="wide")
 
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap');
 * { font-family: 'Noto Kufi Arabic', sans-serif !important; direction: rtl; }
-.stApp { background: #010409; color: #e6edf3; }
-.critical-alert { background: #4a0000; border: 2px solid #ff0000; padding: 15px; border-radius: 12px; margin: 10px 0; animation: blinker 2s linear infinite; }
+.stApp { background: #020617; color: #f8fafc; }
+.alert-card { background: #450a0a; border: 2px solid #ef4444; padding: 20px; border-radius: 12px; margin-bottom: 15px; animation: blinker 2s linear infinite; }
+.news-card { background: #0f172a; border-right: 5px solid #38bdf8; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #1e293b; }
 @keyframes blinker { 50% { opacity: 0.7; } }
-.country-tag { background: #1f6feb; color: white; padding: 2px 8px; border-radius: 5px; font-size: 12px; margin-left: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
+# المفاتيح (يجب وضع مفتاح Gemini الخاص بك هنا)
 GEMINI_KEY = "AIzaSyDuOADJ6YDyqBjOYFC2x-0ql1hgb0kIWaQ"
 NEWS_KEY = "2aff2eb940e54eb8bfb441c4ad07bbc1"
 
-# --- قائمة الكلمات والمناطق الحرجة ---
-CRITICAL_WORDS = [
-    "انفجار", "هجوم", "قصف", "صواريخ", "ضربة", "حرب", "اشتباك", "تسلل",
-    "عمان", "مسقط", "الكويت", "الإمارات", "السعودية", "الرياض", "قطر", "الدوحة",
-    "البحرين", "المنامة", "إيران", "طهران", "إسرائيل", "تل أبيب", "القدس"
-]
+# كلمات البحث والإنذار
+CRITICAL_ZONES = ["عمان", "السعودية", "الإمارات", "قطر", "البحرين", "الكويت", "إيران", "إسرائيل", "فلسطين"]
+URGENT_KEYWORDS = ["انفجار", "هجوم", "قصف", "صواريخ", "ضربة جوية", "اغتيال", "استهداف"]
 
-def play_military_alarm():
-    # صوت إنذار عسكري حاد
-    audio_url = "https://www.soundjay.com/buttons/beep-01a.mp3"
-    st.markdown(f'<audio autoplay><source src="{audio_url}" type="audio/mpeg"></audio>', unsafe_allow_html=True)
+def trigger_audio_alert():
+    # صوت بييب عسكري
+    audio_html = """<audio autoplay><source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg"></audio>"""
+    st.markdown(audio_html, unsafe_allow_html=True)
+
+def speak_news(text):
+    tts = gTTS(text=text, lang='ar')
+    fp = io.BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    audio_b64 = base64.b64encode(fp.read()).decode()
+    st.markdown(f'<audio autoplay><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>', unsafe_allow_html=True)
 
 def ask_gemini(prompt):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
-        r = requests.post(url, json={"contents":[{"parts":[{"text":prompt}]}]}, timeout=10)
+        r = requests.post(url, json={"contents":[{"parts":[{"text":prompt}]}]}, timeout=15)
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except: return "خطأ في الاتصال."
+    except: return "خطأ في التحليل"
 
-# --- الواجهة الرئيسية ---
-st.markdown("<h1 style='text-align:center; color:#ff4b4b;'>🚨 نظام الإنذار المبكر للمنطقة</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>مراقبة نشطة: دول الخليج | إيران | إسرائيل</p>", unsafe_allow_html=True)
+# الواجهة الرئيسية
+st.markdown("<h1 style='text-align:center; color:#38bdf8;'>🛰️ وكيل الاستخبارات العسكري (مباشر)</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:center;'>📅 {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')} - رصد الخليج وإيران وإسرائيل</p>", unsafe_allow_html=True)
+
+tabs = st.tabs(["🔴 الأخبار العاجلة", "🎙️ الموجز الصوتي", "🗺️ الخريطة والعمليات", "📺 البث المباشر"])
 
 # جلب الأخبار
-st.subheader("📡 التغذية الإخبارية الفورية")
-query = "(Oman OR Kuwait OR UAE OR Saudi OR Qatar OR Bahrain OR Iran OR Israel) AND (military OR attack OR explosion)"
+query = "(Oman OR Saudi OR UAE OR Qatar OR Kuwait OR Bahrain OR Iran OR Israel) AND (attack OR strike OR explosion OR military)"
 news_url = f"https://newsapi.org/v2/everything?q={query}&apiKey={NEWS_KEY}&sortBy=publishedAt&pageSize=6"
 
-try:
-    articles = requests.get(news_url).json().get("articles", [])
-    
-    for art in articles:
-        # ترجمة العنوان للعربية للبحث عن الكلمات الحرجة
-        title_ar = ask_gemini(f"ترجم بدقة للعربية: {art['title']}")
+with tabs[0]:
+    st.subheader("📡 التغذية الإخبارية (ترجمة وتحليل لحظي)")
+    try:
+        articles = requests.get(news_url).json().get("articles", [])
+        brief_text = "إليك آخر التطورات العسكرية في المنطقة. "
         
-        # التحقق من وجود كلمة حرجة
-        found_critical = any(word in title_ar for word in CRITICAL_WORDS)
+        for art in articles:
+            # ترجمة العنوان للعربية للتحقق من كلمات الإنذار
+            title_ar = ask_gemini(f"ترجم هذا العنوان للعربية بدقة: {art['title']}")
+            
+            # كشف التنبيه (عمان، السعودية، إلخ أو انفجار، قصف)
+            is_urgent = any(word in title_ar for word in CRITICAL_ZONES + URGENT_KEYWORDS)
+            
+            if is_urgent:
+                st.markdown(f"<div class='alert-card'><h3>🚨 عاجل: {title_ar}</h3><p>المصدر: {art['source']['name']}</p></div>", unsafe_allow_html=True)
+                trigger_audio_alert()
+            else:
+                st.markdown(f"<div class='news-card'><b>🔹 {title_ar}</b><br><small>المصدر: {art['source']['name']}</small></div>", unsafe_allow_html=True)
+            
+            brief_text += title_ar + " . "
         
-        if found_critical:
-            st.markdown(f"""
-            <div class="critical-alert">
-                <h3 style="margin:0;">⚠️ تنبيه عاجل: {title_ar}</h3>
-                <p style="margin:5px 0 0 0; font-size:14px;">المصدر: {art['source']['name']} | الحساسية: عالية 🔴</p>
-            </div>
-            """, unsafe_allow_html=True)
-            play_military_alarm() # إطلاق صوت البييب
+        st.session_state['briefing'] = brief_text
+    except:
+        st.error("يرجى التأكد من مفاتيح الـ API.")
+
+with tabs[1]:
+    st.subheader("🎙️ التقرير الاستخباري المسموع")
+    if st.button("🔊 تشغيل قراءة الموجز الآن"):
+        if 'briefing' in st.session_state:
+            speak_news(st.session_state['briefing'])
         else:
-            with st.expander(f"🔹 {title_ar}"):
-                st.write(f"المصدر: {art['source']['name']}")
-                st.write(f"[رابط الخبر الأصلي]({art['url']})")
+            st.warning("لا يوجد أخبار للقراءتها حالياً.")
 
-except Exception as e:
-    st.error("يرجى التأكد من مفاتيح الـ API.")
+with tabs[2]:
+    st.subheader("🗺️ رادار المواقع الاستراتيجية")
+    
+    st.info("📍 يتم رصد التحركات في مضيق هرمز، القواعد العسكرية، والمطارات الدولية.")
+    st.image("https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1000", caption="رؤية رادارية افتراضية للمنطقة")
 
-# --- قسم الخريطة والتحليل ---
-col1, col2 = st.columns([2, 1])
-with col1:
-    st.info("📍 يتم الآن مراقبة إحداثيات (مضيق هرمز، القواعد الجوية، والمطارات الدولية) في الدول المذكورة.")
-    # خريطة مبسطة
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Middle_East_map.png/800px-Middle_East_map.png", caption="رادار التغطية الإقليمي")
-
-with col2:
-    st.subheader("🕵️ كاشف الزيف")
-    check_input = st.text_area("ضع الخبر هنا للفحص:")
-    if st.button("تحليل"):
-        res = ask_gemini(f"هل هذا الخبر عن {', '.join(CRITICAL_WORDS[:10])} حقيقي أم إشاعة؟ حلل عسكرياً: {check_input}")
-        st.write(res)
+with tabs[3]:
+    st.subheader("📺 القنوات الإخبارية المباشرة")
+    c1, c2 = st.columns(2)
+    with c1: st.video("https://www.youtube.com/watch?v=B-sk6R4AJ5E") # الجزيرة مباشر
+    with c2: st.video("https://www.youtube.com/watch?v=GkBj6pJBHpo") # العربية مباشر
 
 st.markdown("---")
-st.caption("نظام وكيل الأخبار العسكري الذكي - تحديث مباشر 2026")
+st.caption("نظام الرصد العسكري الموحد 2026 - يعمل بالذكاء الاصطناعي")
