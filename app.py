@@ -27,13 +27,32 @@ GEMINI_KEY = "AIzaSyBd9Y8Yc-nKvPRmQm_VlI-DqO-BPIPe4Ws"
 @st.cache_data(ttl=3600)
 def ask_gemini(prompt):
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
-        safety = [{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_DANGEROUS_CONTENT", "HARM_CATEGORY_SEXUALLY_EXPLICIT"]]
-        r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}], "safetySettings": safety}, timeout=30)
-        data = r.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return "⚠️ عذراً، تعذر الحصول على تحليل حالياً. تأكد من اتصال الإنترنت ومفتاح الـ API."
+        # جربنا هنا استخدام موديل 1.5 فلاش لأنه أكثر استقراراً للمفاتيح المجانية
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+        
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
+        }
+
+        r = requests.post(url, json=payload, timeout=30)
+        res_json = r.json()
+
+        # إذا كان هناك خطأ في المفتاح سيظهر هنا
+        if "error" in res_json:
+            return f"❌ خطأ من جوجل: {res_json['error']['message']}"
+
+        if "candidates" in res_json:
+            return res_json["candidates"][0]["content"]["parts"][0]["text"]
+        
+        return "⚠️ رد فارغ، حاول تغيير السؤال."
+    except Exception as e:
+        return f"📡 فشل الاتصال: {str(e)}"
 
 # --- 3. الهيدر الرئيسي ---
 st.markdown(f"""
