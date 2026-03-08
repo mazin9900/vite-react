@@ -22,7 +22,7 @@ div[data-testid="metric-container"] { background: #0d1e30; border-radius: 10px; 
 
 # --- 2. المفاتيح وإعدادات Gemini ---
 NEWS_KEY   = "2aff2eb940e54eb8bfb441c4ad07bbc1"
-GEMINI_KEY = "AIzaSyBd9Y8Yc-nKvPRmQm_VlI-DqO-BPIPe4Ws"
+GEMINI_KEY = "AIzaSyDuOADJ6YDyqBjOYFC2x-0ql1hgb0kIWaQ"
 
 @st.cache_data(ttl=3600)
 def ask_gemini(prompt):
