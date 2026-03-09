@@ -17,7 +17,7 @@ div[data-testid="metric-container"] { background: #0d1e30; border-radius:10px; p
 """, unsafe_allow_html=True)
 
 NEWS_KEY   = "2aff2eb940e54eb8bfb441c4ad07bbc1"
-GEMINI_KEY = "AIzaSyDuOADJ6YDyqBjOYFC2x-0ql1hgb0kIWaQ"
+GEMINI_KEY = "AIzaSyAz0gDheQEJmYCO-D8FAl4mh9idzdohxEU"
 
 st.markdown("""
 <div style='text-align:center;padding:15px;background:linear-gradient(135deg,#04090f,#0d1e30);border-radius:12px;margin-bottom:10px;border:1px solid #1e3a5f'>
