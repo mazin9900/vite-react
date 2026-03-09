@@ -19,22 +19,7 @@ div[data-testid="metric-container"] { background: #0d1e30; border-radius:10px; p
 
 NEWS_KEY   = "2aff2eb940e54eb8bfb441c4ad07bbc1"
 GEMINI_KEY = "AIzaSyAz0gDheQEJmYCO-D8FAl4mh9idzdohxEU"
-@st.cache_data(ttl=3600)
-def ask_gemini(prompt):
-    try:
-        # استخدام موديل 1.5 Flash لأنه الأكثر استقراراً ومجاني تماماً
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # إرسال الطلب مع إعدادات الأمان
-        response = model.generate_content(
-            prompt,
-            safety_settings={
-                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
-                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
-                "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
-                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
-            }
-        )
+@
         return response.text
     except Exception as e:
         # هذا السطر سيطبع لك السبب الحقيقي في صفحة الويب إذا فشل
