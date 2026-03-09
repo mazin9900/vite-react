@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 import feedparser
+import google.generativeai as genai
 from datetime import datetime
 
 st.set_page_config(page_title="🛰️ وكيل الأخبار العسكري", page_icon="🛰️", layout="wide")
