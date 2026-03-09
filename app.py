@@ -19,7 +19,7 @@ div[data-testid="metric-container"] { background: #0d1e30; border-radius:10px; p
 
 NEWS_KEY   = "2aff2eb940e54eb8bfb441c4ad07bbc1"
 GEMINI_KEY = "AIzaSyAz0gDheQEJmYCO-D8FAl4mh9idzdohxEU"
-@
+
         return response.text
     except Exception as e:
         # هذا السطر سيطبع لك السبب الحقيقي في صفحة الويب إذا فشل
