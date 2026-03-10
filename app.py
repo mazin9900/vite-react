@@ -1,5 +1,3 @@
-
-from datetime import datetime
 import streamlit as st
 import requests
 import json
@@ -19,7 +17,7 @@ div[data-testid="metric-container"] { background: #0d1e30; border-radius:10px; p
 """, unsafe_allow_html=True)
 
 NEWS_KEY   = "2aff2eb940e54eb8bfb441c4ad07bbc1"
-GEMINI_KEY = "AIzaSyAz0gDheQEJmYCO-D8FAl4mh9idzdohxEU"  
+GEMINI_KEY = "ضع-مفتاح-Gemini-هنا"   # غيّر هذا
 
 st.markdown("""
 <div style='text-align:center;padding:15px;background:linear-gradient(135deg,#04090f,#0d1e30);border-radius:12px;margin-bottom:10px;border:1px solid #1e3a5f'>
@@ -636,5 +634,3 @@ with TABS[7]:
 
 st.markdown("---")
 st.markdown("<div style='text-align:center;color:#475569;font-size:11px'>🛰️ وكيل الأخبار العسكري | أخبار اليوم + Telegram + Reddit + RSS + كشف الأخبار المزيفة + Gemini AI</div>", unsafe_allow_html=True)
-
-
